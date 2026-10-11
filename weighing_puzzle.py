@@ -1,8 +1,8 @@
 import random
 
 def main():
-    # 偽物のコイン（1〜9）をランダムに決定
-    fake_coin = random.randint(1, 9)
+    # 偽物のコインの候補（1〜9）
+    possible_fake_coins = set(range(1, 10))
     
     print("天秤ゲームを開始します。1〜9と書かれた合計9枚のコインがあります。")
     print("その中の1枚は他より重い偽物のコインです。")
@@ -53,10 +53,29 @@ def main():
 
         print(f"\n左の天秤に {', '.join(map(str, left_coins))} が、右の天秤に {', '.join(map(str, right_coins))} が乗っています")
 
-        # 天秤の判定
-        if fake_coin in left_coins:
+        # 後出しで天秤の結果を判定
+        candidates_left = possible_fake_coins.intersection(set(left_coins))
+        candidates_right = possible_fake_coins.intersection(set(right_coins))
+        candidates_balanced = possible_fake_coins.difference(set(left_coins).union(set(right_coins)))
+
+        # 候補が最も多く残る選択肢を選ぶ
+        max_size = max(len(candidates_left), len(candidates_right), len(candidates_balanced))
+        
+        options = []
+        if len(candidates_left) == max_size:
+            options.append(("left", candidates_left))
+        if len(candidates_right) == max_size:
+            options.append(("right", candidates_right))
+        if len(candidates_balanced) == max_size:
+            options.append(("balanced", candidates_balanced))
+            
+        # タイの場合はランダム（または優先順位）で選択
+        choice, next_possible = random.choice(options)
+        possible_fake_coins = next_possible
+
+        if choice == "left":
             print("左の天秤が下に傾きました\n")
-        elif fake_coin in right_coins:
+        elif choice == "right":
             print("右の天秤が下に傾きました\n")
         else:
             print("天秤は水平のままです\n")
@@ -71,6 +90,15 @@ def main():
             break
         except ValueError:
             print("数字を入力してください。")
+
+    # 最終判定
+    # 候補が2つ以上残っている場合、guess以外のものを正解にする
+    if len(possible_fake_coins) > 1:
+        other_candidates = list(possible_fake_coins - {guess})
+        # もし guess が候補に含まれていなかった場合でも other_candidates は空にならない
+        fake_coin = random.choice(other_candidates)
+    else:
+        fake_coin = list(possible_fake_coins)[0]
 
     if guess == fake_coin:
         print(f"正解です！おめでとうございます！偽物は {fake_coin} 番でした。")
