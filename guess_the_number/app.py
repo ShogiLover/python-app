@@ -3,7 +3,7 @@ import streamlit as st
 # ページの初期設定
 st.set_page_config(page_title="意地悪な数当てゲーム", page_icon="🎮")
 st.title("🧙‍♂️ 意地悪な数当てゲーム")
-st.write("絶対に勝てないかもしれない、ちょっと理不尽な数当てゲームへようこそ。")
+st.write("最適な絞り方をしないと勝てない、ちょっと理不尽な数当てゲームへようこそ。")
 
 # 1. ゲームの状態（セッション状態）の初期化
 if "game_stage" not in st.session_state:
