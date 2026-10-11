@@ -197,16 +197,25 @@ else:
         else:
             fake_coin = st.session_state.possible_fake_coins[0]
             
-        if guess == fake_coin:
-            st.balloons()
-            st.success(f"正解です！おめでとうございます！偽物は {fake_coin} 番でした。")
-        else:
-            st.error(f"残念でした。正解は {fake_coin} 番でした。")
-        
-        if st.button("もう一度遊ぶ"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+        st.session_state.final_result = {
+            "guess": guess,
+            "fake_coin": fake_coin,
+            "is_correct": guess == fake_coin
+        }
+        st.rerun()
+
+if st.session_state.final_result:
+    res = st.session_state.final_result
+    if res["is_correct"]:
+        st.balloons()
+        st.success(f"正解です！おめでとうございます！偽物は {res['fake_coin']} 番でした。")
+    else:
+        st.error(f"残念でした。正解は {res['fake_coin']} 番でした。")
+    
+    if st.button("もう一度遊ぶ"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 # --- CSSで見た目を調整 ---
 st.markdown("""
