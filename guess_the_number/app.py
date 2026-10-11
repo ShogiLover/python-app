@@ -1,9 +1,10 @@
 import streamlit as st
+import random  # 💡 ランダム分岐のために追加
 
 # ページの初期設定
 st.set_page_config(page_title="意地悪な数当てゲーム", page_icon="🎮")
 st.title("🧙‍♂️ 意地悪な数当てゲーム")
-st.write("絶対に勝てないかもしれない、ちょっと理不尽な数当てゲームへようこそ。")
+st.write("最適な絞り方をしないと勝てない、ちょっと理不尽な数当てゲームへようこそ。")
 
 # 1. ゲームの状態（セッション状態）の初期化
 if "game_stage" not in st.session_state:
@@ -71,15 +72,35 @@ elif st.session_state.game_stage == "PLAYING":
         if submitted:
             st.session_state.last_guess = user_guess
 
+            # 💡 現在の候補数が偶数個かチェックする (例: 1~4 の場合は 4 - 1 + 1 = 4個)
+            total_elements = st.session_state.max_value - st.session_state.min_value + 1
+            is_even_elements = (total_elements % 2 == 0)
+
             # 意地悪な条件分岐ロジック
             if user_guess < st.session_state.min_value:
                 res_msg = f"正解の数は {user_guess} 以上です。"
+            elif user_guess > st.session_state.max_value:
+                res_msg = f"正解の数は {user_guess} 未満です。"
+            
+            # 💡 【修正】数字の範囲が偶数個、かつユーザーの入力が mid_value + 1 に等しい場合
+            elif is_even_elements and user_guess == (st.session_state.mid_value + 1):
+                # 50%の確率で「以上」、50%の確率で「未満」に分岐させる
+                if random.random() < 0.5:
+                    # 「以上」を選んだ場合（min_valueを更新）
+                    st.session_state.min_value = user_guess
+                    st.session_state.mid_value = (st.session_state.max_value + st.session_state.min_value) // 2
+                    res_msg = f"正解の数は {user_guess} 以上です。"
+                else:
+                    # 「未満」を選んだ場合（max_valueを更新）
+                    st.session_state.max_value = user_guess - 1
+                    st.session_state.mid_value = (st.session_state.max_value + st.session_state.min_value) // 2
+                    res_msg = f"正解の数は {user_guess} 未満です。"
+            
+            # それ以外の通常時の分岐
             elif user_guess <= st.session_state.mid_value:
                 st.session_state.min_value = user_guess
                 st.session_state.mid_value = (st.session_state.max_value + st.session_state.min_value) // 2
                 res_msg = f"正解の数は {user_guess} 以上です。"
-            elif user_guess > st.session_state.max_value:
-                res_msg = f"正解の数は {user_guess} 未満です。"
             else:
                 st.session_state.max_value = user_guess - 1
                 st.session_state.mid_value = (st.session_state.max_value + st.session_state.min_value) // 2
@@ -155,7 +176,6 @@ elif st.session_state.game_stage == "GAMEOVER":
         st.session_state.game_stage = "SETUP"
         st.rerun()
 
-    # 💡 【追加】ゲームオーバー画面の最下部にもこれまでの判定履歴を常時表示させる
     if st.session_state.history:
         st.write("---")
         st.subheader("📋 これまでの判定履歴")
