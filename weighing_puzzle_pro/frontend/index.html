@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { margin: 0; padding: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        #container { background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; }
+        .dropzone-wrapper { display: flex; justify-content: space-around; align-items: flex-end; margin-bottom: 25px; height: 160px; }
+        .dropzone { 
+            width: 130px; height: 130px; border: 2px dashed #adb5bd; border-radius: 12px; 
+            display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; padding: 10px;
+            position: relative; transition: all 0.2s;
+        }
+        .dropzone.over { background-color: rgba(0, 123, 255, 0.1); border-color: #007bff; }
+        #left-zone { border-color: #ff4b4b; }
+        #right-zone { border-color: #1c83e1; }
+        .zone-label { position: absolute; top: -22px; left: 0; width: 100%; text-align: center; font-size: 13px; font-weight: bold; }
+        #left-zone .zone-label { color: #ff4b4b; }
+        #right-zone .zone-label { color: #1c83e1; }
+        
+        .source-wrapper { 
+            border: 1px solid #ced4da; border-radius: 12px; padding: 12px; background-color: #ffffff;
+            min-height: 80px;
+        }
+        .source-title { text-align: center; color: #6c757d; font-size: 11px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .coin-slot { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+        
+        .coin { 
+            width: 38px; height: 38px; background: radial-gradient(circle at 30% 30%, #ffd700, #daa520);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            cursor: grab; font-weight: bold; color: #5d4037; font-size: 16px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2); user-select: none; transition: transform 0.1s;
+        }
+        .coin:active { cursor: grabbing; }
+        
+        .button-container { text-align: center; margin-top: 20px; }
+        button { 
+            padding: 10px 24px; font-size: 15px; font-weight: bold;
+            background-color: #28a745; color: white; border: none; border-radius: 25px;
+            cursor: pointer; box-shadow: 0 4px 0 #1e7e34; transition: all 0.1s;
+        }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #1e7e34; }
+        button:disabled { background-color: #6c757d; box-shadow: 0 4px 0 #495057; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="dropzone-wrapper">
+            <div id="left-zone" class="dropzone" data-zone="left">
+                <span class="zone-label">左の天秤</span>
+            </div>
+            <div style="font-size: 32px; margin-bottom: 40px;">⚖️</div>
+            <div id="right-zone" class="dropzone" data-zone="right">
+                <span class="zone-label">右の天秤</span>
+            </div>
+        </div>
+
+        <div class="source-wrapper">
+            <div class="source-title">コイン置き場</div>
+            <div id="source-zone" class="coin-slot dropzone" data-zone="source">
+                <!-- Coins will be generated here -->
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button id="weigh-btn">計量する</button>
+        </div>
+    </div>
+
+    <script>
+        const leftZone = document.getElementById('left-zone');
+        const rightZone = document.getElementById('right-zone');
+        const sourceZone = document.getElementById('source-zone');
+        const weighBtn = document.getElementById('weigh-btn');
+
+        // Create coins
+        for (let i = 1; i <= 9; i++) {
+            const coin = document.createElement('div');
+            coin.className = 'coin';
+            coin.draggable = true;
+            coin.textContent = i;
+            coin.dataset.id = i;
+            coin.id = 'coin-' + i;
+            
+            coin.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', e.target.id);
+                e.target.style.opacity = '0.4';
+            });
+            coin.addEventListener('dragend', (e) => {
+                e.target.style.opacity = '1';
+            });
+            sourceZone.appendChild(coin);
+        }
+
+        const zones = [leftZone, rightZone, sourceZone];
+        zones.forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (zone.dataset.zone !== 'source') zone.classList.add('over');
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('over');
+            });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('over');
+                const id = e.dataTransfer.getData('text/plain');
+                const coin = document.getElementById(id);
+                
+                // For zones, we append to the zone itself, but for source we append to the slot
+                if (zone.id === 'source-zone') {
+                    zone.appendChild(coin);
+                } else {
+                    zone.appendChild(coin);
+                }
+            });
+        });
+
+        // Streamlit Communication
+        function sendMessageToStreamlit(data) {
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: data
+            }, '*');
+        }
+
+        weighBtn.addEventListener('click', () => {
+            const leftCoins = Array.from(leftZone.querySelectorAll('.coin')).map(c => parseInt(c.dataset.id));
+            const rightCoins = Array.from(rightZone.querySelectorAll('.coin')).map(c => parseInt(c.dataset.id));
+            
+            if (leftCoins.length === 0 || rightCoins.length === 0) {
+                alert("両方の天秤にコインを乗せてください");
+                return;
+            }
+            if (leftCoins.length !== rightCoins.length) {
+                alert("左右の枚数を同じにしてください");
+                return;
+            }
+
+            sendMessageToStreamlit({
+                left: leftCoins,
+                right: rightCoins,
+                timestamp: Date.now() // Always trigger update in Streamlit
+            });
+        });
+
+        // Notify Streamlit of height
+        const observer = new ResizeObserver(() => {
+            window.parent.postMessage({
+                type: 'streamlit:setFrameHeight',
+                height: document.body.scrollHeight
+            }, '*');
+        });
+        observer.observe(document.body);
+    </script>
+</body>
+</html>
